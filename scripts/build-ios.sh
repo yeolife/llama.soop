@@ -6,21 +6,12 @@ if ! command -v cmake &> /dev/null; then
 fi
 
 function cp_headers() {
-  mkdir -p ../ios/rnllama.xcframework/$1/rnllama.framework/Headers
-  cp ../cpp/*.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
+  local framework_root="../ios/rnllama.xcframework/$1/rnllama.framework"
+  mkdir -p "${framework_root}/Headers"
+  cp ../ios/RNLlamaContext.h "${framework_root}/Headers/"
 
-  mkdir -p ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/minja
-  cp ../cpp/minja/*.hpp ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/minja/
-
-  mkdir -p ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/nlohmann
-  cp ../cpp/nlohmann/*.hpp ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/nlohmann/
-
-  # Copy necessary common headers to Headers root (for includes without path prefix)
-  cp ../cpp/common/chat.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
-  cp ../cpp/common/common.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
-  cp ../cpp/common/sampling.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
-  cp ../cpp/common/json-schema-to-grammar.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
-  cp ../cpp/common/peg-parser.h ../ios/rnllama.xcframework/$1/rnllama.framework/Headers/
+  mkdir -p "${framework_root}/Modules"
+  cp ../ios/module.modulemap "${framework_root}/Modules/module.modulemap"
 }
 
 function build_framework() {

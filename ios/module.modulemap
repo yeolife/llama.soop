@@ -1,0 +1,5 @@
+framework module rnllama {
+  umbrella header "RNLlamaContext.h"
+  export *
+  module * { export * }
+}
