@@ -575,7 +575,6 @@ static void *gLogCallbackUserData = nullptr;
 }
 
 - (NSDictionary *)completion:(NSDictionary *)params
-    onToken:(void (^)(NSMutableDictionary * tokenResult))onToken
 {
     if (llama->completion == nullptr) {
         @throw [NSException exceptionWithName:@"LlamaException" reason:@"Completion not initialized" userInfo:nil];
@@ -785,8 +784,7 @@ static void *gLogCallbackUserData = nullptr;
         @throw [NSException exceptionWithName:@"LlamaException" reason:@"Context is full" userInfo:nil];
     }
 
-    size_t sent_count = 0;
-    size_t sent_token_probs_index = 0;
+    size_t processed_chars = 0;
 
     while (llama->completion->has_next_token && !llama->completion->is_interrupted) {
         const rnllama::completion_token_output token_with_probs = llama->completion->doCompletion();
@@ -795,7 +793,7 @@ static void *gLogCallbackUserData = nullptr;
         }
         const std::string token_text = common_token_to_piece(llama->ctx, token_with_probs.tok);
 
-        size_t pos = std::min(sent_count, llama->completion->generated_text.size());
+        size_t pos = std::min(processed_chars, llama->completion->generated_text.size());
 
         const std::string str_test = llama->completion->generated_text.substr(pos);
         bool is_stop_full = false;
@@ -806,66 +804,13 @@ static void *gLogCallbackUserData = nullptr;
             llama->completion->generated_text.erase(
                 llama->completion->generated_text.begin() + pos + stop_pos,
                 llama->completion->generated_text.end());
-            pos = std::min(sent_count, llama->completion->generated_text.size());
+            pos = std::min(processed_chars, llama->completion->generated_text.size());
         } else {
             is_stop_full = false;
             stop_pos = llama->completion->findStoppingStrings(str_test, token_text.size(),
                 rnllama::STOP_PARTIAL);
         }
-
-        if (
-            stop_pos == std::string::npos ||
-            // Send rest of the text if we are at the end of the generation
-            (!llama->completion->has_next_token && !is_stop_full && stop_pos > 0)
-        ) {
-            const std::string to_send = llama->completion->generated_text.substr(pos, std::string::npos);
-
-            sent_count += to_send.size();
-
-            std::vector<rnllama::completion_token_output> probs_output = {};
-
-            NSMutableDictionary *tokenResult = [[NSMutableDictionary alloc] init];
-            tokenResult[@"token"] = [NSString stringWithUTF8String:to_send.c_str()];
-
-            if (llama->params.sampling.n_probs > 0) {
-                const std::vector<llama_token> to_send_toks = common_tokenize(llama->ctx, to_send, false);
-                size_t probs_pos = std::min(sent_token_probs_index, llama->completion->generated_token_probs.size());
-                size_t probs_stop_pos = std::min(sent_token_probs_index + to_send_toks.size(), llama->completion->generated_token_probs.size());
-                if (probs_pos < probs_stop_pos) {
-                    probs_output = std::vector<rnllama::completion_token_output>(llama->completion->generated_token_probs.begin() + probs_pos, llama->completion->generated_token_probs.begin() + probs_stop_pos);
-                }
-                sent_token_probs_index = probs_stop_pos;
-
-                tokenResult[@"completion_probabilities"] = [self tokenProbsToDict:probs_output];
-            }
-
-            auto partial_output = llama->completion->parseChatOutput(true);
-            if (!partial_output.content.empty()) {
-                tokenResult[@"content"] = [NSString stringWithUTF8String:partial_output.content.c_str()];
-            }
-            if (!partial_output.reasoning_content.empty()) {
-                tokenResult[@"reasoning_content"] = [NSString stringWithUTF8String:partial_output.reasoning_content.c_str()];
-            }
-            if (!partial_output.tool_calls.empty()) {
-                NSMutableArray *toolCalls = [[NSMutableArray alloc] init];
-                for (const auto &tc : partial_output.tool_calls) {
-                    [toolCalls addObject:@{
-                        @"type": @"function",
-                        @"function": @{
-                            @"name": [NSString stringWithUTF8String:tc.name.c_str()],
-                            @"arguments": [NSString stringWithUTF8String:tc.arguments.c_str()],
-                        },
-                        @"id": tc.id.empty() ? [NSNull null] : [NSString stringWithUTF8String:tc.id.c_str()],
-                    }];
-                }
-                tokenResult[@"tool_calls"] = toolCalls;
-            }
-            if (!partial_output.accumulated_text.empty()) {
-                tokenResult[@"accumulated_text"] = [NSString stringWithUTF8String:partial_output.accumulated_text.c_str()];
-            }
-
-            onToken(tokenResult);
-        }
+        processed_chars = llama->completion->generated_text.size();
     }
 
     llama_perf_context_print(llama->ctx);

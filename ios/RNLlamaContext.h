@@ -36,7 +36,7 @@ namespace rnllama {
 - (NSDictionary *)getMultimodalSupport;
 - (bool)isMultimodalEnabled;
 - (void)releaseMultimodal;
-- (NSDictionary *)completion:(NSDictionary *)params onToken:(void (^)(NSMutableDictionary *tokenResult))onToken;
+- (NSDictionary *)completion:(NSDictionary *)params;
 - (void)stopCompletion;
 - (NSNumber *)queueCompletion:(NSDictionary *)params onToken:(void (^)(NSMutableDictionary *tokenResult))onToken onComplete:(void (^)(NSDictionary *result))onComplete;
 - (NSNumber *)queueEmbedding:(NSString *)text params:(NSDictionary *)params onResult:(void (^)(int32_t requestId, NSArray *embedding))onResult;
