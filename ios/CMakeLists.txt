@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(rnllama VERSION 1.0.0 LANGUAGES CXX C)
+project(rnllama VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +18,9 @@ add_definitions(
     -DLM_GGML_BLAS_USE_ACCELERATE
     -DLM_GGML_USE_METAL
 )
+
+enable_language(OBJC)
+enable_language(OBJCXX)
 
 if (CMAKE_OSX_ARCHITECTURES STREQUAL "arm64;x86_64")
     add_definitions(-DLM_GGML_CPU_GENERIC)
@@ -45,15 +48,10 @@ endif ()
 
 # Define public headers
 set(PUBLIC_HEADERS
-    ${SOURCE_DIR}/rn-llama.h
-    ${SOURCE_DIR}/rn-completion.h
-    ${SOURCE_DIR}/rn-slot.h
-    ${SOURCE_DIR}/rn-slot-manager.h
-    ${SOURCE_DIR}/rn-tts.h
-    ${SOURCE_DIR}/llama.h
-    ${SOURCE_DIR}/llama-impl.h
-    ${SOURCE_DIR}/ggml.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/RNLlamaContext.h
 )
+
+set(MODULE_MAP_FILE ${CMAKE_CURRENT_SOURCE_DIR}/module.modulemap)
 
 # Create library target
 add_library(rnllama SHARED
@@ -116,7 +114,10 @@ add_library(rnllama SHARED
 
     # Architecture-specific files
     ${SOURCE_FILES_ARCH}
+    ${CMAKE_CURRENT_SOURCE_DIR}/RNLlamaContext.mm
 )
+
+set_source_files_properties(${CMAKE_CURRENT_SOURCE_DIR}/RNLlamaContext.mm PROPERTIES COMPILE_FLAGS "-fobjc-arc")
 
 # Setup include directories
 target_include_directories(rnllama
@@ -147,4 +148,7 @@ set_target_properties(rnllama PROPERTIES
     VERSION 1.0.0
     PUBLIC_HEADER "${PUBLIC_HEADERS}"
     XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC NO
+    XCODE_ATTRIBUTE_CLANG_ENABLE_MODULES YES
+    XCODE_ATTRIBUTE_DEFINES_MODULE YES
+    XCODE_ATTRIBUTE_MODULEMAP_FILE "${MODULE_MAP_FILE}"
 )

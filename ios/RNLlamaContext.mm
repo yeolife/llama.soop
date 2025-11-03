@@ -1,7 +1,23 @@
 #import "RNLlamaContext.h"
 #import <Metal/Metal.h>
 
+#ifdef __cplusplus
+#include <list>
+#include "common.h"
+#include "chat.h"
+#include "rn-llama.h"
+#include "rn-completion.h"
+#include "rn-slot.h"
+#include "rn-slot-manager.h"
+#include "json-schema-to-grammar.h"
+#include "llama.h"
+#include "llama-impl.h"
+#include "ggml.h"
+#endif
+
 @implementation RNLlamaContext
+
+static void *gLogCallbackUserData = nullptr;
 
 + (BOOL)isGpuAvailable:(NSDictionary *)params {
     BOOL skipGpuDevices = params[@"no_gpu_devices"] && [params[@"no_gpu_devices"] boolValue];
@@ -37,6 +53,11 @@
 + (void)toggleNativeLog:(BOOL)enabled onEmitLog:(void (^)(NSString *level, NSString *text))onEmitLog {
   if (enabled) {
       void (^copiedBlock)(NSString *, NSString *) = [onEmitLog copy];
+      if (gLogCallbackUserData) {
+          CFBridgingRelease(gLogCallbackUserData);
+          gLogCallbackUserData = nullptr;
+      }
+      gLogCallbackUserData = (__bridge_retained void *)copiedBlock;
       llama_log_set([](lm_ggml_log_level level, const char * text, void * data) {
           llama_log_callback_default(level, text, data);
           NSString *levelStr = @"";
@@ -54,10 +75,16 @@
               return;
           }
           void (^block)(NSString *, NSString *) = (__bridge void (^)(NSString *, NSString *))(data);
-          block(levelStr, textStr);
-      }, copiedBlock);
+          if (block) {
+              block(levelStr, textStr);
+          }
+      }, gLogCallbackUserData);
   } else {
       llama_log_set(llama_log_callback_default, nullptr);
+      if (gLogCallbackUserData) {
+          CFBridgingRelease(gLogCallbackUserData);
+          gLogCallbackUserData = nullptr;
+      }
   }
 }
 
@@ -277,7 +304,7 @@
             }
             return !context->llama->is_load_interrupted;
         };
-        defaultParams.progress_callback_user_data = context;
+        defaultParams.progress_callback_user_data = (__bridge void *)context;
     }
 
     context->is_model_loaded = context->llama->loadModel(defaultParams);

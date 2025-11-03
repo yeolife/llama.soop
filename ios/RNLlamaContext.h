@@ -1,26 +1,10 @@
-#ifdef __cplusplus
-#include <list>
-#if RNLLAMA_BUILD_FROM_SOURCE
-#import "llama.h"
-#import "llama-impl.h"
-#import "ggml.h"
-#import "rn-llama.h"
-#import "rn-completion.h"
-#import "rn-slot.h"
-#import "rn-slot-manager.h"
-#import "json-schema-to-grammar.h"
-#else
-#import <rnllama/llama.h>
-#import <rnllama/llama-impl.h>
-#import <rnllama/ggml.h>
-#import <rnllama/rn-llama.h>
-#import <rnllama/rn-completion.h>
-#import <rnllama/rn-slot.h>
-#import <rnllama/rn-slot-manager.h>
-#import <rnllama/json-schema-to-grammar.h>
-#endif
-#endif
+#import <Foundation/Foundation.h>
 
+#ifdef __cplusplus
+namespace rnllama {
+    struct llama_rn_context;
+}
+#endif
 
 @interface RNLlamaContext : NSObject {
     bool is_metal_enabled;
@@ -30,7 +14,11 @@
 
     void (^onProgress)(unsigned int progress);
 
+#ifdef __cplusplus
     rnllama::llama_rn_context * llama;
+#else
+    void * llama;
+#endif
 }
 
 + (void)toggleNativeLog:(BOOL)enabled onEmitLog:(void (^)(NSString *level, NSString *text))onEmitLog;
