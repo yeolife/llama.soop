@@ -25,7 +25,7 @@ function cp_headers() {
 
 function build_framework() {
   # Parameters:
-  # $1: system_name (iOS/tvOS)
+  # $1: system_name (iOS)
   # $2: architectures
   # $3: sysroot
   # $4: output_path
@@ -53,6 +53,11 @@ function build_framework() {
   mkdir -p ../ios/rnllama.xcframework/$4/rnllama.framework/Headers
 
   cp_headers $4
+  if [ "$4" == "ios-arm64_x86_64-simulator" ]; then
+    cp ../cpp/ggml-metal/ggml-llama-sim.metallib ../ios/rnllama.xcframework/$4/rnllama.framework/ggml-llama-sim.metallib
+  else
+    cp ../cpp/ggml-metal/ggml-llama.metallib ../ios/rnllama.xcframework/$4/rnllama.framework/ggml-llama.metallib
+  fi
   cp ../cpp/ggml-metal/ggml-metal.metal ../ios/rnllama.xcframework/$4/rnllama.framework/ggml-metal.metal
 
   rm -rf ./*
@@ -69,14 +74,6 @@ mkdir -p build-ios
 build_framework "iOS" "arm64;x86_64" "iphonesimulator" "ios-arm64_x86_64-simulator" "build-ios"
 build_framework "iOS" "arm64" "iphoneos" "ios-arm64" "build-ios"
 rm -rf build-ios
-
-rm -rf build-tvos
-mkdir -p build-tvos
-
-# Build tvOS frameworks
-build_framework "tvOS" "arm64;x86_64" "appletvsimulator" "tvos-arm64_x86_64-simulator" "build-tvos"
-build_framework "tvOS" "arm64" "appletvos" "tvos-arm64" "build-tvos"
-rm -rf build-tvos
 
 t1=$(date +%s)
 echo "Total time: $((t1 - t0)) seconds"

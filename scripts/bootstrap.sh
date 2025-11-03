@@ -5,7 +5,6 @@ OS=$(uname)
 
 LLAMA_DIR=third_party/llama.cpp
 CPP_DIR="$ROOT_DIR/cpp"
-SRC_DIR="$ROOT_DIR/src"
 
 git submodule init "$LLAMA_DIR"
 git submodule update --recursive "$LLAMA_DIR"
@@ -404,8 +403,6 @@ done
 
 echo "Replacement completed successfully!"
 
-cd example && npm install && cd ..
-
 # Apply patch
 # List ./scripts/patches/ and patch it
 for patch_file in ./scripts/patches/*.patch; do
@@ -416,22 +413,32 @@ rm -rf ./cpp/*.orig
 rm -rf ./cpp/**/*.orig
 
 if [ "$OS" = "Darwin" ]; then
-  # Generate .xcode.env.local in iOS example
-  cd example/ios
-  echo export NODE_BINARY=$(command -v node) > .xcode.env.local
+  # Build metallib (~2.6MB)
+  cd "$LLAMA_DIR/ggml/src/ggml-metal"
+
+  # Create a symbolic link to ggml-common.h in the current directory
+  ln -sf ../ggml-common.h .
+
+  xcrun --sdk iphoneos metal -O3 -std=metal3.2 -mios-version-min=16.0 -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_HAS_BF16=1
+  xcrun --sdk iphoneos metallib ggml-metal.air -o ggml-llama.metallib
+  rm ggml-metal.air
+  mv ./ggml-llama.metallib "$CPP_DIR/ggml-metal/ggml-llama.metallib"
+
+  xcrun --sdk iphonesimulator metal -O3 -std=metal3.2 -mios-version-min=16.0 -c ggml-metal.metal -o ggml-metal.air -DGGML_METAL_HAS_BF16=1
+  xcrun --sdk iphonesimulator metallib ggml-metal.air -o ggml-llama.metallib
+  rm ggml-metal.air
+  mv ./ggml-llama.metallib "$CPP_DIR/ggml-metal/ggml-llama-sim.metallib"
+
+  # Remove the symbolic link
+  rm ggml-common.h
+
   cd -
+
 fi
 
 # Get version info
 cd "$LLAMA_DIR"
 BUILD_NUMBER=$(git rev-list --count HEAD)
 BUILD_COMMIT=$(git rev-parse --short=7 HEAD)
-
-# Put to ../version.ts
-# clean up version.ts
-rm -f "$SRC_DIR/version.ts"
-
-echo "export const BUILD_NUMBER = '$BUILD_NUMBER'" > "$SRC_DIR/version.ts"
-echo "export const BUILD_COMMIT = '$BUILD_COMMIT'" >> "$SRC_DIR/version.ts"
 
 cd "$ROOT_DIR"
