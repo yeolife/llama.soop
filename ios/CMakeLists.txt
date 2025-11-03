@@ -11,7 +11,7 @@ set(CMAKE_XCODE_ATTRIBUTE_ENABLE_BITCODE NO)
 # Dependencies and compile options
 add_definitions(
     -DNDEBUG
-    -DO3
+    -O3
     -DLM_GGML_USE_CPU
     -DLM_GGML_USE_ACCELERATE
     -DLM_GGML_USE_BLAS
