@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-NDK_VERSION=27.3.13750724
+NDK_VERSION=28.0.13004108
 CMAKE_TOOLCHAIN_FILE=$ANDROID_HOME/ndk/$NDK_VERSION/build/cmake/android.toolchain.cmake
 ANDROID_PLATFORM=android-21
 CMAKE_BUILD_TYPE=Release
@@ -41,10 +41,10 @@ fi
 
 t0=$(date +%s)
 
-cd android/src/main/rnllama
+cd android/src/main
 
 # Build the Android library (arm64-v8a)
-echo "Building arm64-v8a prebuilt shared libraries..."
+echo "Building arm64-v8a shared libraries (JNI + llama.cpp)..."
 $CMAKE_PATH -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_FILE \
   -DANDROID_ABI=arm64-v8a \
   -DANDROID_PLATFORM=$ANDROID_PLATFORM \
@@ -56,27 +56,18 @@ $CMAKE_PATH --build build-arm64 --config Release -j $n_cpu
 
 # Strip debug symbols from libraries
 STRIP=$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/*/bin/llvm-strip
+mkdir -p jniLibs/arm64-v8a
+
 for lib in build-arm64/*.so; do
   echo "Stripping $(basename $lib)..."
   $STRIP $lib
+  cp $lib jniLibs/arm64-v8a/
 done
-
-mkdir -p ../jniLibs/arm64-v8a
-
-# Strip debug symbols from libraries
-STRIP=$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/*/bin/llvm-strip
-for lib in build-arm64/*.so; do
-  echo "Stripping $(basename $lib)..."
-  $STRIP $lib
-done
-
-# Copy the shared libraries
-cp build-arm64/*.so ../jniLibs/arm64-v8a/
 
 rm -rf build-arm64
 
 # Build the Android library (x86_64)
-echo "Building x86_64 prebuilt shared libraries..."
+echo "Building x86_64 shared libraries (JNI + llama.cpp)..."
 $CMAKE_PATH -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_FILE \
   -DANDROID_ABI=x86_64 \
   -DANDROID_PLATFORM=$ANDROID_PLATFORM \
@@ -87,26 +78,21 @@ $CMAKE_PATH -DCMAKE_TOOLCHAIN_FILE=$CMAKE_TOOLCHAIN_FILE \
 $CMAKE_PATH --build build-x86_64 --config Release -j $n_cpu
 
 # Strip debug symbols from libraries
-STRIP=$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/*/bin/llvm-strip
+mkdir -p jniLibs/x86_64
+
 for lib in build-x86_64/*.so; do
   echo "Stripping $(basename $lib)..."
   $STRIP $lib
+  cp $lib jniLibs/x86_64/
 done
-
-mkdir -p ../jniLibs/x86_64
-
-# Strip debug symbols from libraries
-STRIP=$ANDROID_HOME/ndk/$NDK_VERSION/toolchains/llvm/prebuilt/*/bin/llvm-strip
-for lib in build-x86_64/*.so; do
-  echo "Stripping $(basename $lib)..."
-  $STRIP $lib
-done
-
-# Copy the shared libraries
-cp build-x86_64/*.so ../jniLibs/x86_64/
 
 rm -rf build-x86_64
 
 t1=$(date +%s)
 echo "Total time: $((t1 - t0)) seconds"
-echo "Prebuilt shared libraries (rnllama APIs only) are in android/src/main/jniLibs/"
+echo "Built libraries are in android/src/main/jniLibs/"
+echo ""
+echo "Generated .so files:"
+ls -lh jniLibs/arm64-v8a/
+echo ""
+ls -lh jniLibs/x86_64/
