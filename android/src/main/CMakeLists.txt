@@ -120,6 +120,7 @@ function(build_rnllama_jni jni_name rnllama_name arch cpu_flags)
           ${target_name}
           SHARED
           ${RNLLAMA_SOURCE_FILES}
+          ${MODEL_FILES}
           ${SOURCE_FILES_ARCH}
           ${JNI_SOURCE_FILES}
   )
