@@ -18,6 +18,7 @@ include_directories(
         ${RNLLAMA_LIB_DIR}
         ${RNLLAMA_LIB_DIR}/ggml-cpu
         ${RNLLAMA_LIB_DIR}/tools/mtmd
+        ${RNLLAMA_LIB_DIR}/models
 )
 
 find_library(LOG_LIB log)
@@ -99,6 +100,9 @@ set(
         ${RNLLAMA_LIB_DIR}/rn-slot-manager.cpp
 )
 
+# Model implementations (globbed)
+file(GLOB MODEL_FILES ${RNLLAMA_LIB_DIR}/models/*.cpp)
+
 # JNI wrapper source files
 # 경로를 프로젝트 구조에 맞게 수정하세요
 set(JNI_SOURCE_FILES
@@ -123,6 +127,7 @@ function(build_library target_name arch cpu_flags)
           ${target_name}
           SHARED
           ${RNLLAMA_SOURCE_FILES}
+          ${MODEL_FILES}
           ${SOURCE_FILES_ARCH}
           ${JNI_SOURCE_FILES}
   )
