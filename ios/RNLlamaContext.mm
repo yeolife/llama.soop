@@ -494,8 +494,8 @@ static void *gLogCallbackUserData = nullptr;
                     kwargs_map[key] = value.get<std::string>();
                 }
             }
-        } catch (...) {
-            // Ignore JSON parsing errors for kwargs
+        } catch (const std::exception &e) {
+            @throw [NSException exceptionWithName:@"LlamaException" reason:[NSString stringWithUTF8String:e.what()] userInfo:nil];
         }
     }
 
