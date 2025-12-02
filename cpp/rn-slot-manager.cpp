@@ -85,7 +85,7 @@ int32_t llama_rn_slot_manager::queue_request(
     std::function<void(llama_rn_slot*)> on_complete
 ) {
     // Generate unique request ID
-    int32_t request_id = next_request_id++;
+    int32_t request_id = next_request_id.fetch_add(1);
 
     LOG_INFO("Queuing request %d with %zu prompt tokens (load_state=%s, save_state=%s, save_size=%d)",
              request_id, prompt.size(),
@@ -134,7 +134,7 @@ int32_t llama_rn_slot_manager::queue_embedding_request(
         return -1;
     }
 
-    int32_t request_id = next_request_id++;
+    int32_t request_id = next_request_id.fetch_add(1);
 
     if (!parent_ctx->params.embedding) {
         LOG_WARNING("Embedding disabled in model parameters; returning zero vector");
@@ -175,7 +175,7 @@ int32_t llama_rn_slot_manager::queue_rerank_request(
         return -1;
     }
 
-    int32_t request_id = next_request_id++;
+    int32_t request_id = next_request_id.fetch_add(1);
 
     const enum llama_pooling_type pooling_type = llama_pooling_type(parent_ctx->ctx);
     if (pooling_type != LLAMA_POOLING_TYPE_RANK) {
@@ -411,7 +411,8 @@ void llama_rn_slot_manager::process_pending_queue() {
 
         switch (request.task_type) {
             case SLOT_TASK_TYPE_COMPLETION: {
-                slot->params = &request.params;
+                slot->params_storage = request.params;
+                slot->params = &slot->params_storage;
                 slot->ctx_sampling = common_sampler_init(parent_ctx->model, request.params.sampling);
 
                 // Assign state parameters
@@ -462,8 +463,8 @@ void llama_rn_slot_manager::process_pending_queue() {
                 slot->current_reasoning_format = request.reasoning_format;
                 slot->current_thinking_forced_open = request.thinking_forced_open;
                 slot->prefill_text = request.prefill_text;
-                slot->n_remaining = request.params.n_predict;
-                slot->stop_words = request.params.antiprompt;
+                slot->n_remaining = slot->params_storage.n_predict;
+                slot->stop_words = slot->params_storage.antiprompt;
                 break;
             }
 

@@ -78,7 +78,7 @@ struct llama_rn_slot_manager {
 
     // Request tracking
     std::map<int32_t, llama_rn_slot*> active_requests;  // request_id -> slot
-    int32_t next_request_id;
+    std::atomic<int32_t> next_request_id;
 
     // Batch processing
     llama_batch batch;
